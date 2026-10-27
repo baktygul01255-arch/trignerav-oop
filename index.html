@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Космический Навигатор: Триго-Неравенства</title>
+    
+    <style>
+        :root {
+            --bg-color: #0d1117;        /* Темный космос */
+            --panel-bg: #161b22;        /* Карточка панели */
+            --text-main: #f0f6fc;       /* Светлый текст */
+            --accent-cyan: #38bdf8;     /* Бирюзовый навигатор */
+            --accent-green: #22c55e;    /* Зеленый (успех/верная дуга) */
+            --accent-pink: #ec4899;     /* Розовый (граница/линия) */
+            --accent-gold: #fbbf24;     /* Золотые акценты */
+            --border-color: #30363d;
+            --success-bg: rgba(34, 197, 94, 0.2);
+            --info-bg: rgba(56, 189, 248, 0.2);
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        body {
+            margin: 0; padding: 20px;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 50% 0%, #1f2937 0%, #0d1117 100%);
+            color: var(--text-main);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh;
+        }
+
+        .game-card {
+            background: var(--panel-bg);
+            border: 3px solid var(--border-color);
+            border-radius: 28px;
+            width: 100%; max-width: 900px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.7), 0 0 20px rgba(56, 189, 248, 0.15);
+            overflow: hidden;
+            display: flex; flex-direction: column;
+            position: relative;
+            min-height: 650px;
+        }
+
+        .header {
+            background: rgba(0,0,0,0.3);
+            padding: 20px 80px 20px 20px; 
+            text-align: center; position: relative;
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .level-badge {
+            display: inline-block; font-size: 18px; color: var(--accent-gold); 
+            font-weight: bold; margin-bottom: 8px;
+            background: rgba(251, 191, 36, 0.15); padding: 6px 20px; border-radius: 20px;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+
+        .title { font-size: 28px; font-weight: bold; margin: 0; color: #fff; }
+
+        .btn-voice {
+            position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
+            width: 60px; height: 60px; border-radius: 30px;
+            background: var(--accent-cyan); border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s, background 0.2s;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4);
+        }
+        .btn-voice:hover { transform: translateY(-50%) scale(1.06); background: #0284c7; }
+        .btn-voice:active { transform: translateY(-50%) scale(0.95); }
+        .btn-voice svg { fill: #0d1117; width: 32px; height: 32px; }
+
+        .game-area {
+            display: flex; flex-direction: column; padding: 30px; gap: 20px;
+            align-items: center; justify-content: center; flex-grow: 1;
+        }
+
+        .instruction {
+            font-size: 24px; line-height: 1.5; text-align: center;
+            color: #c9d1d9; max-width: 780px;
+        }
+
+        .inequality-display {
+            font-size: 42px; font-weight: bold; font-family: 'Courier New', Courier, monospace;
+            background: #0d1117; padding: 15px 35px; border-radius: 20px;
+            border: 3px dashed var(--accent-pink);
+            color: var(--accent-gold); text-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+            margin-bottom: 10px;
+        }
+
+        /* Зона визуализации SVG */
+        .visual-box {
+            width: 100%; max-width: 520px; height: 350px;
+            background: #05080e; border-radius: 24px;
+            border: 2px solid var(--border-color);
+            position: relative; overflow: hidden;
+            box-shadow: inset 0 0 25px rgba(0,0,0,0.9);
+            display: flex; align-items: center; justify-content: center;
+        }
+        svg { width: 100%; height: 100%; user-select: none; }
+
+        .arc-sector {
+            cursor: pointer; transition: all 0.3s;
+            fill: rgba(255, 255, 255, 0.05);
+            stroke: #48515d; stroke-width: 6; stroke-dasharray: 6,6;
+        }
+        .arc-sector:hover {
+            fill: rgba(56, 189, 248, 0.2);
+            stroke: var(--accent-cyan);
+            filter: drop-shadow(0 0 8px var(--accent-cyan));
+        }
+
+        .arc-selected {
+            fill: rgba(34, 197, 94, 0.25) !important;
+            stroke: var(--accent-green) !important;
+            stroke-width: 10 !important;
+            stroke-dasharray: none !important;
+            filter: drop-shadow(0 0 12px var(--accent-green));
+            animation: pulseGlow 2s infinite alternate;
+        }
+
+        .cutoff-line {
+            stroke: var(--accent-pink); stroke-width: 4; stroke-dasharray: 8,6;
+            filter: drop-shadow(0 0 6px var(--accent-pink));
+        }
+
+        .feedback-box {
+            padding: 16px 28px; border-radius: 16px; font-size: 22px; font-weight: bold;
+            text-align: center; width: 100%; max-width: 720px;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .feedback-box.show { opacity: 1; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .fb-success { background: var(--success-bg); color: #4ade80; border: 2px solid var(--accent-green); }
+        .fb-info { background: var(--info-bg); color: #7dd3fc; border: 2px solid var(--accent-cyan); }
+
+        /* Экраны старта и финиша */
+        .overlay-screen {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--panel-bg); z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding: 30px; overflow-y: auto;
+        }
+        .hidden { display: none !important; }
+        .emoji-big { font-size: 90px; margin-bottom: 20px; filter: drop-shadow(0 0 20px rgba(56,189,248,0.5)); }
+        
+        .btn-start {
+            background: var(--accent-cyan); color: #0d1117; border: none;
+            padding: 18px 50px; font-size: 26px; font-weight: bold; border-radius: 50px;
+            cursor: pointer; margin-top: 25px; transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 8px 0 #0284c7, 0 10px 20px rgba(0,0,0,0.4);
+        }
+        .btn-start:hover { transform: translateY(2px); box-shadow: 0 6px 0 #0284c7; }
+        .btn-start:active { transform: translateY(8px); box-shadow: 0 0 0 #0284c7; }
+
+        @keyframes popIn { 0% { transform: scale(0.6); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes pulseGlow { from { opacity: 0.8; } to { opacity: 1; filter: drop-shadow(0 0 18px var(--accent-green)); } }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+    </style>
+</head>
+<body>
+
+    <div class="game-card">
+        
+        <!-- Шапка -->
+        <div class="header">
+            <div id="level-indicator" class="level-badge">Уровень 1 из 4</div>
+            <h1 id="level-title" class="title">Загрузка...</h1>
+            <button class="btn-voice" onclick="speakCurrentInstruction()" aria-label="Прочитать вслух">
+                <svg viewBox="0 0 24 24">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Игровая зона -->
+        <div class="game-area">
+            <div id="instruction" class="instruction">Инструкция...</div>
+            
+            <div id="inequality-box" class="inequality-display">sin(x) &gt; 0.5</div>
+
+            <div class="visual-box" id="visual-container">
+                <!-- SVG генерируется здесь -->
+            </div>
+
+            <div id="feedback" class="feedback-box">Отлично!</div>
+        </div>
+
+        <!-- Приветственный экран -->
+        <div id="screen-intro" class="overlay-screen">
+            <div class="emoji-big" style="animation: float 3s infinite ease-in-out;">🛡️🛰️</div>
+            <h1 style="font-size: 38px; margin-bottom: 15px; color: white;">Космический Навигатор</h1>
+            <p style="font-size: 22px; max-width: 720px; line-height: 1.5; color: #c9d1d9;">
+                Добро пожаловать в центр управления! <br><br>
+                Чтобы защитить корабль, нужно включать защитный купол в правильном секторе.<br>
+                • <strong>Синус (sin)</strong> — отвечает за ВЫСОТУ (выше/ниже линии).<br>
+                • <strong>Косинус (cos)</strong> — отвечает за ШИРИНУ (правее/левее линии).
+            </p>
+            <button class="btn-start" onclick="startGame()">Начать миссию 🚀</button>
+        </div>
+
+        <!-- Экран успеха -->
+        <div id="screen-outro" class="overlay-screen hidden">
+            <div class="emoji-big">🎓⭐</div>
+            <h1 style="font-size: 40px; margin-bottom: 15px; color: white;">Миссия успешно завершена!</h1>
+            <p style="font-size: 24px; max-width: 720px; line-height: 1.5; color: #c9d1d9;">
+                Ты блестяще освоил тригонометрические неравенства! Теперь ты умеешь легко находить защитные дуги для любых решений.
+            </p>
+            <button class="btn-start" onclick="location.reload()">Пройти еще раз 🔄</button>
+        </div>
+    </div>
+
+    <script>
+        const LEVELS = [
+            {
+                id: 'sin_greater',
+                title: 'Задание 1. Синус больше (Выше)',
+                inequality: 'sin(x) > 0.5',
+                text: 'Синус — это высота! Знак > (больше) означает "ВЫШЕ линии". Нажми на ту часть защитного купола, которая находится ВЫШЕ пунктирной линии!',
+                type: 'sin',
+                cutoffVal: 0.5,
+                correctArc: 'top'
+            },
+            {
+                id: 'sin_less',
+                title: 'Задание 2. Синус меньше (Ниже)',
+                inequality: 'sin(x) < 0',
+                text: 'У нас неравенство < 0 (меньше). Нужно найти зону НИЖЕ нулевой высоты (ниже земли). Нажми на нижнюю дугу купола!',
+                type: 'sin',
+                cutoffVal: 0,
+                correctArc: 'bottom'
+            },
+            {
+                id: 'cos_greater',
+                title: 'Задание 3. Косинус больше (Правее)',
+                inequality: 'cos(x) > 0.5',
+                text: 'Косинус — это ширина по горизонтали! Знак > (больше) означает "ПРАВЕЕ вертикальной стены". Включи дугу СПРАВА от линии!',
+                type: 'cos',
+                cutoffVal: 0.5,
+                correctArc: 'right'
+            },
+            {
+                id: 'cos_less',
+                title: 'Задание 4. Косинус меньше (Левее)',
+                inequality: 'cos(x) < 0',
+                text: 'Теперь неравенство cos(x) < 0 (меньше). Нам нужна зона СЛЕВА от центральной стены. Нажми на ЛЕВУЮ дугу!',
+                type: 'cos',
+                cutoffVal: 0,
+                correctArc: 'left'
+            }
+        ];
+
+        let currentLevelIdx = 0;
+        let isAnimating = false;
+
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ru-RU';
+                utterance.rate = 0.85; // Чуть спокойнее для ООП
+                utterance.pitch = 1.05;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        function speakCurrentInstruction() {
+            speakText(LEVELS[currentLevelIdx].text);
+        }
+
+        function startGame() {
+            document.getElementById('screen-intro').classList.add('hidden');
+            loadLevel(currentLevelIdx);
+        }
+
+        function loadLevel(idx) {
+            const level = LEVELS[idx];
+            isAnimating = false;
+            
+            document.getElementById('level-indicator').innerText = `Задание ${idx + 1} из ${LEVELS.length}`;
+            document.getElementById('level-title').innerText = level.title;
+            document.getElementById('inequality-box').innerText = level.inequality;
+            
+            // Выделение ключевых слов цветом
+            let instructionHtml = level.text
+                .replace(/ВЫШЕ/g, '<strong style="color:var(--accent-green);">ВЫШЕ</strong>')
+                .replace(/НИЖЕ/g, '<strong style="color:var(--accent-green);">НИЖЕ</strong>')
+                .replace(/ПРАВЕЕ/g, '<strong style="color:var(--accent-green);">ПРАВЕЕ</strong>')
+                .replace(/СЛЕВА/g, '<strong style="color:var(--accent-green);">СЛЕВА</strong>')
+                .replace(/Синус/g, '<strong style="color:var(--accent-cyan);">Синус</strong>')
+                .replace(/Косинус/g, '<strong style="color:var(--accent-gold);">Косинус</strong>');
+            
+            document.getElementById('instruction').innerHTML = instructionHtml;
+            
+            const fb = document.getElementById('feedback');
+            fb.className = 'feedback-box';
+            fb.innerText = '';
+
+            renderVisual(level);
+            setTimeout(speakCurrentInstruction, 400);
+        }
+
+        function renderVisual(level) {
+            const container = document.getElementById('visual-container');
+            const CX = 260, CY = 175, R = 120; // Центр и радиус
+            
+            let svg = `
+            <svg viewBox="0 0 520 350">
+                <!-- О координатная сетка -->
+                <line x1="40" y1="${CY}" x2="480" y2="${CY}" stroke="#30363d" stroke-width="2" />
+                <line x1="${CX}" y1="20" x2="${CX}" y2="330" stroke="#30363d" stroke-width="2" />
+                <text x="470" y="${CY - 10}" fill="#8b949e" font-size="16" font-weight="bold">X (cos)</text>
+                <text x="${CX + 10}" y="35" fill="#8b949e" font-size="16" font-weight="bold">Y (sin)</text>
+
+                <!-- Главная окружность (Купол) -->
+                <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="#21262d" stroke-width="4" />
+            `;
+
+            if (level.type === 'sin') {
+                // Горизонтальная линия отсечения y = cutoffVal
+                // y_svg = CY - cutoffVal * R
+                const lineY = CY - level.cutoffVal * R;
+                
+                // Вычисляем угол пересечения: sin(alpha) = cutoffVal
+                const alphaRad = Math.asin(level.cutoffVal);
+                const dx = R * Math.cos(alphaRad);
+                const xRight = CX + dx;
+                const xLeft = CX - dx;
+
+                // Пунктирная линия уровня
+                svg += `<line class="cutoff-line" x1="50" y1="${lineY}" x2="470" y2="${lineY}" />`;
+                svg += `<text x="480" y="${lineY + 5}" fill="var(--accent-pink)" font-size="18" font-weight="bold">y = ${level.cutoffVal}</text>`;
+
+                // Две дуги: Верхняя (top) и Нижняя (bottom)
+                // Верхняя дуга от xRight,lineY до xLeft,lineY (sweep-flag = 0 для верхней)
+                svg += `
+                    <path id="arc-top" class="arc-sector" 
+                          d="M ${xRight},${lineY} A ${R},${R} 0 0,0 ${xLeft},${lineY}" 
+                          onclick="selectArc('top')"/>
+                    <path id="arc-bottom" class="arc-sector" 
+                          d="M ${xLeft},${lineY} A ${R},${R} 0 1,0 ${xRight},${lineY}" 
+                          onclick="selectArc('bottom')"/>
+                `;
+
+                // Граничные точки
+                svg += `
+                    <circle cx="${xRight}" cy="${lineY}" r="7" fill="var(--accent-pink)" />
+                    <circle cx="${xLeft}" cy="${lineY}" r="7" fill="var(--accent-pink)" />
+                `;
+
+                if (level.cutoffVal === 0.5) {
+                    svg += `<text x="${xRight + 12}" y="${lineY - 10}" fill="#f0f6fc" font-size="16">π/6</text>`;
+                    svg += `<text x="${xLeft - 45}" y="${lineY - 10}" fill="#f0f6fc" font-size="16">5π/6</text>`;
+                } else {
+                    svg += `<text x="${CX + R + 10}" y="${CY + 20}" fill="#f0f6fc" font-size="16">0</text>`;
+                    svg += `<text x="${CX - R - 25}" y="${CY + 20}" fill="#f0f6fc" font-size="16">π</text>`;
+                }
+
+            } else if (level.type === 'cos') {
+                // Вертикальная линия отсечения x = cutoffVal
+                // x_svg = CX + cutoffVal * R
+                const lineX = CX + level.cutoffVal * R;
+
+                const alphaRad = Math.acos(level.cutoffVal);
+                const dy = R * Math.sin(alphaRad);
+                const yTop = CY - dy;
+                const yBottom = CY + dy;
+
+                // Пунктирная вертикальная линия
+                svg += `<line class="cutoff-line" x1="${lineX}" y1="20" x2="${lineX}" y2="330" />`;
+                svg += `<text x="${lineX - 25}" y="30" fill="var(--accent-pink)" font-size="18" font-weight="bold">x = ${level.cutoffVal}</text>`;
+
+                // Две дуги: Правая (right) и Левая (left)
+                svg += `
+                    <path id="arc-right" class="arc-sector" 
+                          d="M ${lineX},${yTop} A ${R},${R} 0 0,1 ${lineX},${yBottom}" 
+                          onclick="selectArc('right')"/>
+                    <path id="arc-left" class="arc-sector" 
+                          d="M ${lineX},${yBottom} A ${R},${R} 0 1,1 ${lineX},${yTop}" 
+                          onclick="selectArc('left')"/>
+                `;
+
+                // Граничные точки
+                svg += `
+                    <circle cx="${lineX}" cy="${yTop}" r="7" fill="var(--accent-pink)" />
+                    <circle cx="${lineX}" cy="${yBottom}" r="7" fill="var(--accent-pink)" />
+                `;
+
+                if (level.cutoffVal === 0.5) {
+                    svg += `<text x="${lineX + 10}" y="${yTop - 10}" fill="#f0f6fc" font-size="16">π/3</text>`;
+                    svg += `<text x="${lineX + 10}" y="${yBottom + 20}" fill="#f0f6fc" font-size="16">-π/3</text>`;
+                } else {
+                    svg += `<text x="${CX + 10}" y="${CY - R - 10}" fill="#f0f6fc" font-size="16">π/2</text>`;
+                    svg += `<text x="${CX + 10}" y="${CY + R + 25}" fill="#f0f6fc" font-size="16">-π/2</text>`;
+                }
+            }
+
+            svg += `</svg>`;
+            container.innerHTML = svg;
+        }
+
+        function selectArc(arcName) {
+            if (isAnimating) return;
+            
+            const level = LEVELS[currentLevelIdx];
+            const selectedElem = document.getElementById(`arc-${arcName}`);
+            const fb = document.getElementById('feedback');
+
+            if (arcName === level.correctArc) {
+                isAnimating = true;
+                selectedElem.classList.add('arc-selected');
+
+                let successText = '';
+                if (level.id === 'sin_greater') {
+                    successText = 'Великолепно! Высота выше 0.5 — это вся верхняя дуга от π/6 до 5π/6! 🛡️✨';
+                } else if (level.id === 'sin_less') {
+                    successText = 'Правильно! Ниже нуля находится вся нижняя полуокружность! 🌊';
+                } else if (level.id === 'cos_greater') {
+                    successText = 'Супер! Правее линии 0.5 находятся углы от -π/3 до π/3! 🎯';
+                } else if (level.id === 'cos_less') {
+                    successText = 'Отлично! Левее нулевой стены находится вся левая зона! 🚀';
+                }
+
+                fb.innerText = successText;
+                fb.className = 'feedback-box show fb-success';
+                speakText(successText);
+
+                setTimeout(nextLevel, 5500);
+
+            } else {
+                fb.innerText = 'Посмотри еще раз на знак в неравенстве! Попробуй выбрать другую сторону.';
+                fb.className = 'feedback-box show fb-info';
+                speakText('Посмотри еще раз на знак в неравенстве! Попробуй выбрать другую сторону.');
+            }
+        }
+
+        function nextLevel() {
+            currentLevelIdx++;
+            if (currentLevelIdx < LEVELS.length) {
+                loadLevel(currentLevelIdx);
+            } else {
+                document.getElementById('screen-outro').classList.remove('hidden');
+                speakText("Миссия успешно завершена! Ты блестяще освоил тригонометрические неравенства!");
+            }
+        }
+    </script>
+</body>
+</html>
